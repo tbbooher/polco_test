@@ -1,22 +1,50 @@
-set :application, "set your application name here"
-set :repository,  "set your repository location here"
+set :application, "polco"
+load 'deploy' if respond_to?(:namespace) # cap2 differentiator
 
-set :scm, :subversion
-# Or: `accurev`, `bzr`, `cvs`, `darcs`, `git`, `mercurial`, `perforce`, `subversion` or `none`
+default_run_options[:pty] = true
+set :repository,  "git@github.com:tbbooher/polco.git"
+set :scm, "git"
+#set :scm_passphrase, "polco111" #This is your custom users password
+set :user, "deployer"
 
-role :web, "your web-server here"                          # Your HTTP server, Apache/etc
-role :app, "your app-server here"                          # This may be the same as your `Web` server
-role :db,  "your primary db-server here", :primary => true # This is where Rails migrations will run
-role :db,  "your slave db-server here"
+ssh_options[:forward_agent] = true
+set :branch, "master"
 
-# If you are using Passenger mod_rails uncomment this:
-# if you're still using the script/reapear helper you will need
-# these http://github.com/rails/irs_process_scripts
+set :git_shallow_clone, 1
+set :git_enable_submodules, 1
 
-# namespace :deploy do
-#   task :start {}
-#   task :stop {}
-#   task :restart, :roles => :app, :except => { :no_release => true } do
-#     run "#{try_sudo} touch #{File.join(current_path,'tmp','restart.txt')}"
-#   end
-# end
+set :stages, %w(production staging)
+require 'capistrano/ext/multistage'
+ 
+server "74.207.224.12", :app, :web, :db, :primary => true
+ 
+set :user, 'root'
+set :keep_releases, 3
+set :use_sudo, false
+set :deploy_via, :copy
+ 
+# this will make sure that capistrano checks out the submodules if any
+set :git_enable_submodules, 1
+ 
+set(:application) { "polco_#{stage}" } # replace gitlearn with your application name
+set (:deploy_to) { "/var/www/#{application}" }
+set :copy_remote_dir, "/home/#{user}/tmp"
+ 
+# source: http://tomcopeland.blogs.com/juniordeveloper/2008/05/mod_rails-and-c.html
+namespace :deploy do
+  desc "Restarting mod_rails with restart.txt"
+  task :restart, :roles => :app, :except => { :no_release => true } do
+    run "touch #{current_path}/tmp/restart.txt"
+  end
+ 
+  [:start, :stop].each do |t|
+    desc "#{t} task is a no-op with mod_rails"
+    task t, :roles => :app do ; end
+  end
+  
+  desc "invoke the db migration"
+  task:migrate, :roles => :app do
+    send(run_method, "cd #{current_path} && rake db:migrate RAILS_ENV=#{stage} ")
+  end
+  
+end
