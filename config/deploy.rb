@@ -4,8 +4,7 @@ load 'deploy' if respond_to?(:namespace) # cap2 differentiator
 default_run_options[:pty] = true
 set :repository,  "git@github.com:tbbooher/polco.git"
 set :scm, "git"
-#set :scm_passphrase, "polco111" #This is your custom users password
-set :user, "deployer"
+#set :user, "deployer"
 
 ssh_options[:forward_agent] = true
 set :branch, "master"
